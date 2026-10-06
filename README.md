@@ -56,6 +56,4 @@ Separate unit per field (diameter, length, liquid level), vertical or horizontal
 
 For quick estimates and cross-checks only. Verify design, relief and SIL results with the applicable standards (API 520/521, IEC 61508/61511), licensed software and your company procedures before use. Provided as is, without warranty.
 
-## License
 
-MIT
