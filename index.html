@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Perry's Unit Converter</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mut:#667085;--ac:#0b63ce;--bd:#d8dce3;--hi:#e8f1fd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1318;--card:#181e26;--tx:#e8ecf2;--mut:#93a0b3;--ac:#5aa2ff;--bd:#2b3441;--hi:#1b2a40}}
+:root[data-theme="dark"]{--bg:#0f1318;--card:#181e26;--tx:#e8ecf2;--mut:#93a0b3;--ac:#5aa2ff;--bd:#2b3441;--hi:#1b2a40}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:14px}
+h1{font-size:19px;margin:4px 0 10px}
+input,select{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;max-height:150px;overflow:auto}
+.chip{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:16px;padding:5px 11px;font-size:13px;cursor:pointer}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-top:8px}
+.row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-top:10px}
+label{font-size:12px;color:var(--mut);display:block;margin-bottom:3px}
+button.sw{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:10px 12px;font-size:16px;cursor:pointer}
+.res{margin-top:14px;padding:12px;border-radius:10px;background:var(--hi);font-size:22px;font-weight:600;word-break:break-all}
+.res small{display:block;font-size:12px;font-weight:400;color:var(--mut)}
+.note{font-size:12px;color:var(--mut);margin-top:8px}
+.tw{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td{padding:6px 4px;border-bottom:1px solid var(--bd)}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+tr.cur td{color:var(--ac);font-weight:600}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}@media(max-width:480px){.g2{grid-template-columns:1fr}}</style></head><body><main>
+<h1>⚙️ Perry's Unit Converter</h1>
+<input id="q" placeholder="Search category or unit (flow, lpm, psi, kcal…)" autocomplete="off">
+<div class="chips" id="chips"></div>
+<div class="card">
+<label>Value</label><input id="v" type="number" step="any" value="1" inputmode="decimal">
+<div class="row"><div><label>From</label><select id="f"></select></div><button class="sw" id="sw" title="Swap">⇄</button><div><label>To</label><select id="t"></select></div></div>
+<div class="res" id="r"></div>
+<div class="note" id="n"></div>
+<div class="tw"><table id="tb"></table></div>
+</div>
+<div class="card"><b>🛢️ Cylinder volume</b>
+<div class="row" style="grid-template-columns:1fr"><div><label>Diameter</label><div style="display:flex;gap:4px"><input id="cd" type="number" step="any" inputmode="decimal" style="min-width:0"><select id="cdu" style="width:68px;padding:10px 4px"><option value="1" >m</option><option value=".001">mm</option><option value=".01">cm</option><option value=".3048">ft</option><option value=".0254" selected>in</option></select></div></div><div><label>Length / Height</label><div style="display:flex;gap:4px"><input id="cl" type="number" step="any" inputmode="decimal" style="min-width:0"><select id="clu" style="width:68px;padding:10px 4px"><option value="1" selected>m</option><option value=".001">mm</option><option value=".01">cm</option><option value=".3048">ft</option><option value=".0254" >in</option></select></div></div><div><label>Liquid level (optional)</label><div style="display:flex;gap:4px"><input id="cv" type="number" step="any" inputmode="decimal" style="min-width:0"><select id="cvu" style="width:68px;padding:10px 4px"><option value="1" >m</option><option value=".001">mm</option><option value=".01">cm</option><option value=".3048">ft</option><option value=".0254" >in</option></select></div></div><div><label>Orientation</label><select id="co"><option value="v">Vertical</option><option value="h">Horizontal</option></select></div></div>
+<div class="tw"><table id="ct"></table></div>
+<div class="note">Level from bottom. Plain cylinder (no dished heads). Each field has its own unit.</div></div>
+<div class="card"><b>🧮 Process calculators</b><div class="g2"><div><label>Group</label><select id="tg"></select></div><div><label>Calculator</label><select id="tn"></select></div></div><div class="g2" id="tf"></div><div class="tw"><table id="tr"></table></div><div class="note" id="tnote"></div></div>
+</main>
+<script>
+const R=8.314462618,nN=101325/(R*273.15),nS=101325/(R*288.15),nF=0.028316846592*101325/(R*288.7056);
+const T=[ // [label, toBase(K), fromBase]
+['°C',v=>v+273.15,k=>k-273.15],['K',v=>v,k=>k],['°F',v=>(v-32)*5/9+273.15,k=>(k-273.15)*9/5+32],['°R',v=>v*5/9,k=>k*9/5]];
+const D=[
+['Length',[['m',1],['cm',.01],['mm',.001],['km',1000],['micron (µm)',1e-6],['Å',1e-10],['in',.0254],['ft',.3048],['yd',.9144],['mile',1609.344]]],
+['Area',[['m²',1],['cm²',1e-4],['mm²',1e-6],['km²',1e6],['ha',1e4],['in²',6.4516e-4],['ft²',.09290304],['yd²',.83612736],['acre',4046.8564224]]],
+['Volume',[['m³',1],['L',.001],['mL (cm³)',1e-6],['in³',1.6387064e-5],['ft³',.028316846592],['US gal',.003785411784],['Imp gal',.00454609],['US bbl (42 gal)',.158987294928],['US qt',9.46352946e-4],['US fl oz',2.95735295625e-5]]],
+['Mass',[['kg',1],['g',.001],['mg',1e-6],['tonne (t)',1000],['lb',.45359237],['oz',.028349523125],['short ton',907.18474],['long ton',1016.0469088],['grain',6.479891e-5]]],
+['Time',[['s',1],['min',60],['h',3600],['day',86400],['week',604800]]],
+['Temperature',T],
+['Temperature difference (ΔT)',[['K = Δ°C',1],['Δ°F = Δ°R',5/9]]],
+['Pressure',[['Pa',1],['kPa',1e3],['MPa',1e6],['bar',1e5],['mbar',100],['atm',101325],['kg/cm² (kgf/cm²)',98066.5],['psi',6894.757293168],['mmHg (torr)',133.322387415],['inHg',3386.389],['mmH₂O',9.80665],['inH₂O (4°C)',249.082]],'Gauge/absolute offset not applied — convert absolute values or differences.'],
+['Volumetric flow',[['m³/s',1],['m³/h',1/3600],['m³/min',1/60],['L/s',.001],['L/min (lpm)',1/6e4],['L/h (lph)',1/3.6e6],['mL/min',1/6e7],['ft³/s',.028316846592],['ft³/min (cfm)',.028316846592/60],['ft³/h (cfh)',.028316846592/3600],['US gpm',6.30901964e-5],['US gph',6.30901964e-5/60],['Imp gpm',.00454609/60],['bbl/h',.158987294928/3600],['bbl/d (BPD)',.158987294928/86400],['kbbl/d (KBPD)',158.987294928/86400],['MMscf/d (as ft³)',1e6*.028316846592/86400]],'Actual-condition volume. For Nm³/Sm³/scf use Molar & std gas flow.',4,1],
+['Mass flow',[['kg/s',1],['kg/h',1/3600],['kg/min',1/60],['t/h',1000/3600],['t/d (TPD)',1000/86400],['g/s',.001],['lb/s',.45359237],['lb/min',.45359237/60],['lb/h',.45359237/3600],['klb/h (Mlb/h)',453.59237/3600]],'',1,3],
+['Molar & std gas flow',[['mol/s',1],['kmol/h',1000/3600],['kmol/d',1000/86400],['kmol/s',1000],['lbmol/h',453.59237/3600],['lbmol/s',453.59237],['Nm³/h (0°C,1 atm)',nN/3600],['Nm³/min',nN/60],['Sm³/h (15°C,1 atm)',nS/3600],['Sm³/d',nS/86400],['scfm (60°F,1 atm)',nF/60],['scfh',nF/3600],['MMscfd',nF*1e6/86400]],'Ideal-gas basis. Nm³: 0°C, Sm³: 15°C, scf: 60°F, all at 101.325 kPa.'],
+['Density',[['kg/m³',1],['g/L',1],['g/cm³ (kg/L)',1000],['lb/ft³',16.01846337],['lb/US gal',119.826427],['lb/in³',27679.9047],['lb/bbl',.45359237/.158987294928]]],
+['Specific volume',[['m³/kg',1],['L/kg (cm³/g ×1e3)',1e-3],['cm³/g',1e-3],['ft³/lb',.06242796],['US gal/lb',.0083454]]],
+['Velocity',[['m/s',1],['cm/s',.01],['km/h',1/3.6],['ft/s',.3048],['ft/min',.00508],['in/s',.0254],['mph',.44704],['knot',.514444]]],
+['Force',[['N',1],['kN',1e3],['kgf',9.80665],['lbf',4.4482216152605],['dyne',1e-5],['tonne-force',9806.65]]],
+['Energy / Work',[['J',1],['kJ',1e3],['MJ',1e6],['GJ',1e9],['cal',4.184],['kcal',4184],['Mcal',4.184e6],['Btu (IT)',1055.05585262],['MMBtu',1.05505585262e9],['kWh',3.6e6],['hp·h',2.684519537696e6],['ft·lbf',1.3558179483],['kgf·m',9.80665],['toe',4.1868e10]]],
+['Power / Heat duty',[['W',1],['kW',1e3],['MW',1e6],['hp (mech)',745.69987158],['metric hp (PS)',735.49875],['kcal/h',1.162222],['Gcal/h (Mkcal/h)',1.162222e6],['Btu/h',.29307107],['MMBtu/h',293071.07],['Btu/s',1055.05585],['ft·lbf/s',1.3558179483],['ton refrig. (TR)',3516.8528],['cal/s',4.184]]],
+['Specific energy / enthalpy',[['J/kg',1],['kJ/kg',1e3],['MJ/kg',1e6],['kcal/kg (cal/g ×1e3)',4184],['cal/g',4184],['Btu/lb',2326],['kWh/kg',3.6e6]]],
+['Specific heat (Cp)',[['J/kg·K',1],['kJ/kg·K',1e3],['kcal/kg·°C',4184],['cal/g·°C',4184],['Btu/lb·°F',4186.8]]],
+['Heat flux',[['W/m²',1],['kW/m²',1e3],['kcal/h·m²',1.162222],['Btu/h·ft²',3.154591]]],
+['Heat transfer coeff. (U, h)',[['W/m²·K',1],['kW/m²·K',1e3],['kcal/h·m²·°C',1.162222],['Btu/h·ft²·°F',5.678263],['cal/s·cm²·°C',41840]]],
+['Fouling factor',[['m²·K/W',1],['h·m²·°C/kcal',.860421],['h·ft²·°F/Btu',.1761102]]],
+['Thermal conductivity',[['W/m·K',1],['kW/m·K',1e3],['kcal/h·m·°C',1.162222],['cal/s·cm·°C',418.4],['Btu/h·ft·°F',1.730735],['Btu·in/h·ft²·°F',.1441314]]],
+['Dynamic viscosity',[['Pa·s',1],['cP (mPa·s)',1e-3],['P (poise)',.1],['lb/ft·s',1.488163944],['lb/ft·h',4.133789e-4],['kgf·s/m²',9.80665]]],
+['Kinematic viscosity',[['m²/s',1],['cSt (mm²/s)',1e-6],['St',1e-4],['ft²/s',.09290304],['ft²/h',2.58064e-5],['in²/s',6.4516e-4]],'SUS/SSU/Redwood scales are non-linear — not included.'],
+['Surface tension',[['N/m',1],['mN/m (dyn/cm)',1e-3],['lbf/ft',14.5939029],['lbf/in',175.126835]]],
+['Rotational speed',[['rpm',1],['rad/s',60/(2*Math.PI)],['Hz (rev/s)',60],['rev/h',1/60]]]
+];
+const $=id=>document.getElementById(id);
+let ci=0;
+function fmt(x){if(!isFinite(x))return'—';if(x===0)return'0';const a=Math.abs(x);
+if(a>=1e10||a<1e-4)return x.toExponential(6).replace(/\.?0+e/,'e').replace('e+','e');
+return String(+x.toPrecision(9));}
+function toB(u,v){return u.length===3?u[1](v):v*u[1];}
+function fromB(u,b){return u.length===3?u[2](b):b/u[1];}
+function chips(){const q=$('q').value.trim().toLowerCase();$('chips').innerHTML='';
+D.forEach((c,i)=>{if(q&&!(c[0].toLowerCase().includes(q)||c[1].some(u=>u[0].toLowerCase().includes(q))))return;
+const b=document.createElement('button');b.className='chip'+(i===ci?' on':'');b.textContent=c[0];b.onclick=()=>{ci=i;setCat();chips();};$('chips').appendChild(b);});}
+function setCat(){const c=D[ci],o=c[1].map((u,i)=>`<option value="${i}">${u[0]}</option>`).join('');
+$('f').innerHTML=o;$('t').innerHTML=o;$('f').value=c[3]??0;$('t').value=c[4]??(c[3]===0?1:Math.min(1,c[1].length-1));
+$('n').textContent=c[2]||'';calc();}
+function calc(){const c=D[ci],U=c[1],v=parseFloat($('v').value),fi=+$('f').value,ti=+$('t').value;
+if(isNaN(v)){$('r').textContent='—';$('tb').innerHTML='';return;}
+const b=toB(U[fi],v);
+$('r').innerHTML=`${fmt(fromB(U[ti],b))} ${U[ti][0]}<small>${fmt(v)} ${U[fi][0]} =</small>`;
+$('tb').innerHTML=U.map((u,i)=>`<tr class="${i===ti?'cur':''}"><td>${u[0]}</td><td>${fmt(fromB(u,b))}</td></tr>`).join('');}
+$('q').oninput=()=>{chips();const q=$('q').value.trim().toLowerCase();if(q){const m=D.findIndex(c=>c[0].toLowerCase().includes(q))>=0?D.findIndex(c=>c[0].toLowerCase().includes(q)):D.findIndex(c=>c[1].some(u=>u[0].toLowerCase().includes(q)));if(m>=0&&m!==ci){ci=m;setCat();chips();}}};
+['v','f','t'].forEach(i=>$(i).oninput=calc);
+$('sw').onclick=()=>{const a=$('f').value;$('f').value=$('t').value;$('t').value=a;calc();};
+
+function cyl(){const d=parseFloat($('cd').value)*$('cdu').value,L=parseFloat($('cl').value)*$('clu').value,lv=parseFloat($('cv').value)*$('cvu').value,h=$('co').value==='h';
+if(!(d>0&&L>0)){$('ct').innerHTML='';return;}
+const r=d/2,V=Math.PI*r*r*L;let Vl=null;
+if(lv>=0){const x=Math.min(lv,h?d:L);Vl=h?(r*r*Math.acos((r-x)/r)-(r-x)*Math.sqrt(Math.max(0,2*r*x-x*x)))*L:Math.PI*r*r*x;}
+const U=[['m³',1],['L',.001],['US gal',.003785411784],['US bbl',.158987294928],['ft³',.028316846592]];
+let t='<tr><td></td><td><b>Total</b></td>'+(Vl!==null?'<td><b>Liquid</b></td>':'')+'</tr>';
+U.forEach(a=>t+=`<tr><td>${a[0]}</td><td>${fmt(V/a[1])}</td>${Vl!==null?`<td>${fmt(Vl/a[1])}</td>`:''}</tr>`);
+if(Vl!==null)t+=`<tr><td>Fill %</td><td></td><td>${fmt(Vl/V*100)}</td></tr>`;
+$('ct').innerHTML=t;}
+['cd','cdu','cl','clu','cv','cvu','co'].forEach(i=>$(i).oninput=cyl);
+chips();setCat();
+const H=(a,b)=>[a,b];
+const OR=[['D',71],['E',126],['F',198],['G',325],['H',506],['J',830],['K',1186],['L',1841],['M',2323],['N',2800],['P',4116],['Q',7126],['R',10323],['T',16774]];
+const dd=[[0,.9167,1.0019],[10,.5277,1.09],[30,.7429,1.0425],[50,.892,1.0176],[70,.8705,1.0226],[90,.949,1.011],[95,.8008,1.0355]];
+const ant=T=>T<=100?[8.07131,1730.63,233.426]:[8.14019,1810.94,244.485];
+const PF=(l,t)=>l*t/2,P2=(l,t)=>Math.pow(l*t,2)/3,P3=(l,t)=>Math.pow(l*t,2);
+const arch=[['1oo1',1],['1oo2',2],['2oo3',3]],pf=(a,l,t)=>a==1?PF(l,t):a==2?P2(l,t):P3(l,t);
+const TL=[
+{g:'Piping & hydraulics',n:'Line sizing (ΔP, velocity)',f:[['Q','Flow m³/h',100],['rho','Density kg/m³',800],['mu','Viscosity cP',2],['D','Inside dia mm',100],['L','Length m',100],['e','Roughness mm',.046]],c:v=>{const d=v.D/1e3,u=v.Q/3600/(Math.PI*d*d/4),Re=v.rho*u*d/(v.mu/1e3),f=Re<2300?64/Re:.25/Math.pow(Math.log10(v.e/1e3/(3.7*d)+5.74/Math.pow(Re,.9)),2),dp=f*v.L/d*v.rho*u*u/2;return[['Velocity m/s',u],['Reynolds',Re],['Darcy f (Swamee-Jain)',f],['ΔP total kPa',dp/1e3],['ΔP total kg/cm²',dp/98066.5],['ΔP per 100 m kPa',dp/1e3*100/v.L],['ρv² kg/m·s²',v.rho*u*u]]},note:'Straight pipe only; add fittings separately.'},
+{g:'Piping & hydraulics',n:'Pump power & head',f:[['Q','Flow m³/h',100],['dp','Differential pressure bar',5],['sg','SG',.8],['ef','Efficiency %',70]],c:v=>{const h=v.dp*1e5/(v.sg*1000*9.80665),hy=v.Q*v.dp/36;return[['Head m',h],['Hydraulic kW',hy],['Shaft kW',hy/(v.ef/100)],['Shaft hp',hy/(v.ef/100)*1.34102]]}},
+{g:'Piping & hydraulics',n:'NPSHa',f:[['ps','Suction source pressure bar a',1.013],['pv','Vapour pressure bar a',.3],['sg','SG',.8],['hs','Static head above pump m',3],['hf','Suction line loss m',.5]],c:v=>{const x=(v.ps-v.pv)*1e5/(v.sg*1000*9.80665)+v.hs-v.hf;return[['NPSHa m',x],['NPSHa ft',x*3.28084]]}},
+{g:'Piping & hydraulics',n:'Vessel volume with heads',f:[['D','Diameter m',2],['L','Tan-tan length m',6],['h','Head type',0,[['2:1 ellipsoidal',0],['Hemispherical',1],['Flat',2]]]],c:v=>{const s=Math.PI*v.D*v.D/4*v.L,k=[1/24,1/12,0][v.h],hd=2*Math.PI*Math.pow(v.D,3)*k,t=s+hd;return[['Shell m³',s],['Both heads m³',hd],['Total m³',t],['Total L',t*1e3],['Total US bbl',t/.158987294928],['Total US gal',t/.003785411784]]}},
+{g:'Heat transfer & utilities',n:'Heat duty (m·Cp·ΔT)',f:[['m','Flow kg/h',10000],['cp','Cp kJ/kg·K',2.2],['ti','T in °C',100],['to','T out °C',200]],c:v=>{const q=v.m/3600*v.cp*(v.to-v.ti);return[['Duty kW',q],['kcal/h',q*859.845],['Gcal/h',q*859.845/1e6],['MMBtu/h',q*3.41214/1e3],['Btu/h',q*3412.14]]}},
+{g:'Heat transfer & utilities',n:'LMTD & area (counter-current)',f:[['a','Hot in °C',200],['b','Hot out °C',120],['c','Cold in °C',40],['d','Cold out °C',110],['q','Duty kW',1000],['u','U W/m²K',300],['F','F correction',.9]],c:v=>{const d1=v.a-v.d,d2=v.b-v.c,l=Math.abs(d1-d2)<1e-6?d1:(d1-d2)/Math.log(d1/d2);return[['ΔT1 / ΔT2',d1+' / '+d2],['LMTD °C',l],['Area m²',v.q*1e3/(v.u*v.F*l)],['Area ft²',v.q*1e3/(v.u*v.F*l)*10.7639]]}},
+{g:'Heat transfer & utilities',n:'Saturated steam (approx.)',f:[['m','Mode',0,[['T °C → P',0],['P bar a → T',1]]],['x','Value (°C or bar a)',150]],c:v=>{let T,P;if(v.m==0){T=v.x;const a=ant(T);P=Math.pow(10,a[0]-a[1]/(a[2]+T))*133.322e-5}else{P=v.x;const mm=P/133.322e-5,a=ant(mm>760?150:50);T=a[1]/(a[0]-Math.log10(mm))-a[2]}const l=2257*Math.pow(Math.max(0,(374.15-T)/274.15),.38);return[['T sat °C',T],['P sat bar a',P],['P sat kg/cm² a',P*1.01972],['Latent heat kJ/kg',l],['Latent heat kcal/kg',l/4.1868]]},note:'Antoine + Watson fits; ±1%. Use IAPWS tables for design.'},
+{g:'Heat transfer & utilities',n:'Heater efficiency (O₂, stack)',f:[['o','Flue O₂ % (dry)',3],['ts','Stack T °C',300],['ta','Air T °C',30],['fu','Fuel',0,[['Fuel gas',0],['Fuel oil',1]]]],c:v=>{const A=v.fu==0?.66:.68,B=v.fu==0?.009:.007,l=(v.ts-v.ta)*(A/(21-v.o)+B);return[['Excess air %',v.o/(20.9-v.o)*100],['Stack loss % (Siegert)',l],['Efficiency % (ex radiation)',100-l]]}},
+{g:'Heat transfer & utilities',n:'Fuel gas MW & LHV',f:[['h2','H₂ mol%',20],['c1','CH₄ mol%',60],['c2','C₂H₆ mol%',10],['c3','C₃H₈ mol%',7],['c4','C₄H₁₀ mol%',3]],c:v=>{const s=v.h2+v.c1+v.c2+v.c3+v.c4,m=(v.h2*2.016+v.c1*16.043+v.c2*30.07+v.c3*44.097+v.c4*58.123)/s,l=(v.h2*10.78+v.c1*35.8+v.c2*63.7+v.c3*91.3+v.c4*118.5)/s;return[['Sum mol%',s],['MW',m],['LHV MJ/Nm³',l],['LHV kcal/Nm³',l*238.846],['LHV kcal/kg',l*238.846*22.414/m]]}},
+{g:'Safety',n:'PSV fire case & orifice (API 521/520)',f:[['A','Wetted area m²',50],['q','Fire basis',0,[['43.2 (drainage + fire-fighting)',0],['70.9 (poor drainage)',1]]],['F','Env. factor F',1],['lam','Latent heat kJ/kg',300],['M','Vapour MW',100],['T','Relieving T K',400],['k','Cp/Cv k',1.1],['Z','Z',1],['ps','Set pressure barg',10],['ac','Accumulation %',21],['kd','Kd',.975],['kb','Kb',1]],c:v=>{const Q=(v.q==0?43.2:70.9)*v.F*Math.pow(v.A,.82),W=Q*3600/v.lam,P1=v.ps*(1+v.ac/100)*100+101.325,C=.03948*Math.sqrt(v.k*Math.pow(2/(v.k+1),(v.k+1)/(v.k-1))),a=W/(C*v.kd*P1*v.kb)*Math.sqrt(v.T*v.Z/v.M),o=OR.find(x=>x[1]>=a);return[['Heat input kW',Q],['Relief load kg/h',W],['P1 kPa a',P1],['C coeff',C],['Req. area mm²',a],['API orifice',o?o[0]+' ('+o[1]+' mm²)':'> T, use multiple']]},note:'Wetted area, fluid data are user inputs. Vapour sizing, Kc=1. Verify with full API 520/521 study.'},
+{g:'Safety',n:'SIS PFDavg / SIL',f:[['ti','Proof test interval yr',1],['s','Sensor λDU /yr',.02],['sa','Sensor arch',1,arch],['l','Logic λDU /yr',.002],['e','Final element λDU /yr',.05],['ea','Final element arch',1,arch]],c:v=>{const a=pf(v.sa,v.s,v.ti),b=v.l*v.ti/2,c=pf(v.ea,v.e,v.ti),t=a+b+c,sil=t<1e-4?'SIL 4':t<1e-3?'SIL 3':t<1e-2?'SIL 2':t<1e-1?'SIL 1':'< SIL 1';return[['PFD sensor',a],['PFD logic',b],['PFD final element',c],['PFDavg loop',t],['RRF',1/t],['Achieved',sil]]},note:'Simplified (no CCF/β, MTTR). For SIL verification use full IEC 61508 calc.'},
+{g:'Process',n:'Blending (RVP, viscosity, SG)',f:[...[1,2,3].flatMap(i=>[['v'+i,'Comp '+i+' vol%',[50,30,20][i-1]],['r'+i,'  RVP psi',[8,5,2][i-1]],['n'+i,'  Visc cSt',[5,20,100][i-1]],['s'+i,'  SG',[.7,.75,.85][i-1]]])],c:v=>{let V=0,R=0,sg=0,m=0,vb=0;for(const i of[1,2,3])V+=v['v'+i];for(const i of[1,2,3]){const x=v['v'+i]/V,w=x*v['s'+i];R+=x*Math.pow(v['r'+i],1.25);sg+=w;m+=w;}for(const i of[1,2,3]){const w=v['v'+i]/V*v['s'+i]/m;vb+=w*(14.534*Math.log(Math.log(v['n'+i]+.8))+10.975)}return[['Blend RVP psi',Math.pow(R,.8)],['Blend RVP kPa',Math.pow(R,.8)*6.89476],['Blend visc cSt (Refutas)',Math.exp(Math.exp((vb-10.975)/14.534))-.8],['Blend SG',sg]]},note:'RVP via RVP^1.25 index; viscosity via Refutas, mass-weighted.'},
+{g:'Process',n:'Yield / mass balance',f:[['F','Feed t/h',100],...[1,2,3,4,5].map(i=>['p'+i,'Product '+i+' t/h',[10,25,30,25,0][i-1]])],c:v=>{let s=0;const r=[];for(let i=1;i<=5;i++){s+=v['p'+i];r.push(['Product '+i+' yield wt%',v['p'+i]/v.F*100])}r.push(['Total products wt%',s/v.F*100],['Loss / gain wt%',(v.F-s)/v.F*100]);return r}},
+{g:'Process',n:'H₂ consumption',f:[['F','Feed m³/h',100],['mu','Make-up gas Nm³/h',20000],['mp','Make-up purity vol%',95],['pu','Purge/off-gas Nm³/h',3000],['pp','Purge H₂ vol%',75]],c:v=>{const c=v.mu*v.mp/100-v.pu*v.pp/100;return[['H₂ consumed Nm³/h',c],['Nm³/m³ feed',c/v.F],['scf/bbl',c/v.F*5.6146]]},note:'Excludes dissolved H₂ losses in liquid products.'},
+{g:'Process',n:'ASTM D86 ↔ TBP (Daubert)',f:[['d','Direction',0,[['D86 → TBP',0],['TBP → D86',1]]],...dd.map(x=>['t'+x[0],x[0]+'% °C',[60,90,120,150,180,220,250][dd.indexOf(x)]])],c:v=>dd.map(x=>{const R=(v['t'+x[0]]+273.15)*1.8,o=v.d==0?x[1]*Math.pow(R,x[2]):Math.pow(R/x[1],1/x[2]);return[x[0]+'% '+(v.d==0?'TBP':'D86')+' °C',o/1.8-273.15]}),note:'At 760 mmHg; temperatures are 0–95% points.'}
+];
+const gs=[...new Set(TL.map(x=>x.g))];
+function tlInit(){$('tg').innerHTML=gs.map(g=>`<option>${g}</option>`).join('');tgSet();}
+function tgSet(){$('tn').innerHTML=TL.map((x,i)=>x.g===$('tg').value?`<option value="${i}">${x.n}</option>`:'').join('');tnSet();}
+function tnSet(){const t=TL[$('tn').value];$('tf').innerHTML=t.f.map(f=>`<div><label>${f[1]}</label>${f[3]?`<select data-k="${f[0]}">${f[3].map(o=>`<option value="${o[1]}"${o[1]==f[2]?' selected':''}>${o[0]}</option>`).join('')}</select>`:`<input data-k="${f[0]}" type="number" step="any" inputmode="decimal" value="${f[2]}">`}</div>`).join('');$('tf').querySelectorAll('input,select').forEach(e=>e.oninput=tCalc);$('tnote').textContent=t.note||'';tCalc();}
+function tCalc(){const t=TL[$('tn').value],v={};let ok=1;$('tf').querySelectorAll('input,select').forEach(e=>{v[e.dataset.k]=parseFloat(e.value);if(isNaN(v[e.dataset.k]))ok=0});if(!ok){$('tr').innerHTML='';return}let r;try{r=t.c(v)}catch(x){r=[['Error','check inputs']]}$('tr').innerHTML=r.map(x=>`<tr><td>${x[0]}</td><td>${typeof x[1]==='number'?fmt(x[1]):x[1]}</td></tr>`).join('');}
+$('tg').onchange=tgSet;$('tn').onchange=tnSet;tlInit();
+</script></body></html>
